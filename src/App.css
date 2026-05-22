@@ -1,7 +1,7 @@
 main {
   width: min(1120px, 100%);
   margin: 0 auto;
-  padding: 10px 18px 18px;
+  padding: calc(10px + var(--safe-top)) 18px calc(22px + var(--safe-bottom));
   box-sizing: border-box;
 }
 
@@ -50,7 +50,7 @@ main {
 
 .view-switch {
   position: sticky;
-  top: 0;
+  top: var(--safe-top);
   z-index: 2;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr)) 46px;
@@ -491,7 +491,7 @@ textarea {
 
 @media (min-width: 760px) {
   main {
-    padding: 18px 28px 28px;
+    padding: calc(18px + var(--safe-top)) 28px calc(28px + var(--safe-bottom));
   }
 
   .team-grid {

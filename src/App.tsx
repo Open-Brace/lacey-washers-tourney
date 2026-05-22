@@ -54,7 +54,7 @@ function App() {
   const [draggingTeamId, setDraggingTeamId] = useState<string | null>(null)
   const [editingScoreKey, setEditingScoreKey] = useState<string | null>(null)
   const [scoreDrafts, setScoreDrafts] = useState<ScoreDrafts>({})
-  const [musicMuted, setMusicMuted] = useState(() => localStorage.getItem('laceyMusicMuted') === 'true')
+  const [musicMuted, setMusicMuted] = useState(true)
   const stateRef = useRef(state)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const dragTeamIdRef = useRef<string | null>(null)
@@ -82,31 +82,19 @@ function App() {
     if (!audio) return
 
     audio.volume = 0.72
-    void audio.play().catch(() => undefined)
-
-    const unlockAudio = () => {
-      void audio.play().catch(() => undefined)
-    }
-
-    window.addEventListener('pointerdown', unlockAudio, { once: true })
-    window.addEventListener('keydown', unlockAudio, { once: true })
-
-    return () => {
-      window.removeEventListener('pointerdown', unlockAudio)
-      window.removeEventListener('keydown', unlockAudio)
-    }
   }, [])
 
   useEffect(() => {
     const audio = audioRef.current
-    localStorage.setItem('laceyMusicMuted', String(musicMuted))
-
     if (!audio) return
 
     audio.muted = musicMuted
-    if (!musicMuted) {
-      void audio.play().catch(() => undefined)
+    if (musicMuted) {
+      audio.pause()
+      return
     }
+
+    void audio.play().catch(() => undefined)
   }, [musicMuted])
 
   useEffect(() => {
@@ -305,6 +293,8 @@ function App() {
         audio.muted = nextMuted
         if (!nextMuted) {
           void audio.play().catch(() => undefined)
+        } else {
+          audio.pause()
         }
       }
 
@@ -374,7 +364,7 @@ function App() {
 
   return (
     <main>
-      <audio ref={audioRef} src={partySongPath} autoPlay loop muted={musicMuted} preload="auto" playsInline />
+      <audio ref={audioRef} src={partySongPath} loop muted={musicMuted} preload="auto" playsInline />
       <nav className="view-switch" aria-label="Tournament view">
         <button
           type="button"
