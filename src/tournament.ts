@@ -27,6 +27,8 @@ export type TournamentState = {
   updatedBy: string
 }
 
+export const eventTitle = 'Can you believe Lacey really graduated from college?'
+
 export const defaultPlayers = [
   'Grandma',
   'Grandpa',
@@ -51,7 +53,7 @@ export const createDefaultState = (): TournamentState => {
   const teams = randomizeTeams(defaultPlayers)
 
   return {
-    title: "I Can't Believe Lacey Graduated From College",
+    title: eventTitle,
     players: defaultPlayers,
     teams,
     matches: [],

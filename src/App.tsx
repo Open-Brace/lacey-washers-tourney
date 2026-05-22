@@ -14,6 +14,7 @@ import './App.css'
 import {
   assignSeeds,
   createDefaultState,
+  eventTitle,
   getChampion,
   getRoundName,
   getTeam,
@@ -31,6 +32,7 @@ import {
 import { supabase, tableName, tournamentId, type TournamentRow } from './supabase'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'offline'
+type ActiveView = 'teams' | 'bracket'
 type MatchSide = 'A' | 'B'
 type ScoreDrafts = Record<string, string>
 
@@ -45,6 +47,7 @@ const cleanScoreDraft = (value: string) => value.replace(/\D/g, '').slice(0, 2)
 function App() {
   const [state, setState] = useState<TournamentState>(() => createDefaultState())
   const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [activeView, setActiveView] = useState<ActiveView>('teams')
   const [selectedRound, setSelectedRound] = useState(1)
   const [rosterOpen, setRosterOpen] = useState(false)
   const [rosterDraft, setRosterDraft] = useState(state.players.join('\n'))
@@ -163,6 +166,7 @@ function App() {
       matches: [],
       status: 'setup',
     })
+    setActiveView('teams')
     setSelectedRound(1)
   }
 
@@ -176,6 +180,7 @@ function App() {
       matches: [],
       status: 'setup',
     })
+    setActiveView('teams')
     setRosterOpen(false)
   }
 
@@ -187,6 +192,7 @@ function App() {
       matches: bracket.matches,
       status: 'live',
     })
+    setActiveView('bracket')
     setSelectedRound(1)
   }
 
@@ -232,6 +238,7 @@ function App() {
       matches: resetScores(state.matches),
       status: 'live',
     })
+    setActiveView('bracket')
     setSelectedRound(1)
   }
 
@@ -242,6 +249,7 @@ function App() {
       matches: [],
       status: 'setup',
     })
+    setActiveView('teams')
   }
 
   const handleSeedByDraw = () => {
@@ -251,6 +259,7 @@ function App() {
       matches: [],
       status: 'setup',
     })
+    setActiveView('teams')
   }
 
   const handleSeedDragStart = (teamId: string, event: PointerEvent<HTMLButtonElement>) => {
@@ -321,7 +330,7 @@ function App() {
             <span className="washer-dot" />
             Lacey's Graduation Washers
           </div>
-          <h1>{state.title}</h1>
+          <h1>{eventTitle}</h1>
         </div>
 
         <div className={`sync-pill ${saveState}`}>
@@ -340,30 +349,47 @@ function App() {
         </section>
       ) : null}
 
-      <section className="quick-actions" aria-label="Tournament actions">
-        <button type="button" onClick={handleRandomizeTeams}>
+      <nav className="view-switch" aria-label="Tournament view">
+        <button
+          type="button"
+          className={activeView === 'teams' ? 'active' : ''}
+          aria-pressed={activeView === 'teams'}
+          onClick={() => setActiveView('teams')}
+        >
           <Dices size={18} />
           Teams
         </button>
-        <button type="button" onClick={handleStartBracket} disabled={state.teams.length < 2}>
+        <button
+          type="button"
+          className={activeView === 'bracket' ? 'active' : ''}
+          aria-pressed={activeView === 'bracket'}
+          onClick={() => setActiveView('bracket')}
+        >
           <Trophy size={18} />
           Bracket
         </button>
-        <button type="button" onClick={handleResetScores} disabled={!state.matches.length}>
-          <RotateCcw size={18} />
-          Scores
-        </button>
-      </section>
+      </nav>
 
-      <section className="setup-panel">
+      {activeView === 'teams' ? <section className="setup-panel">
         <div className="section-title">
           <div>
             <p>Teams</p>
             <h2>{state.teams.length} teams from {state.players.length} players</h2>
           </div>
-          <button type="button" className="text-button" onClick={() => setRosterOpen(!rosterOpen)}>
-            Roster
-          </button>
+          <div className="title-actions">
+            <button type="button" className="text-button" onClick={() => setRosterOpen(!rosterOpen)}>
+              Roster
+            </button>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={handleStartBracket}
+              disabled={state.teams.length < 2}
+            >
+              <Trophy size={16} />
+              Bracket
+            </button>
+          </div>
         </div>
 
         {rosterOpen ? (
@@ -405,15 +431,21 @@ function App() {
             />
           ))}
         </div>
-      </section>
+      </section> : null}
 
-      <section className="bracket-panel">
+      {activeView === 'bracket' ? <section className="bracket-panel">
         <div className="section-title">
           <div>
             <p>Bracket</p>
             <h2>{state.matches.length ? 'Enter scores to advance teams' : 'Start the bracket when teams look right'}</h2>
           </div>
-          <span className="status-label">{state.status}</span>
+          <div className="title-actions">
+            <span className="status-label">{state.status}</span>
+            <button type="button" className="text-button" onClick={handleResetScores} disabled={!state.matches.length}>
+              <RotateCcw size={16} />
+              Scores
+            </button>
+          </div>
         </div>
 
         {rounds.length ? (
@@ -458,9 +490,18 @@ function App() {
           <div className="empty-bracket">
             <img src="/washer-board.svg" alt="" />
             <p>Randomize teams, adjust seeds if needed, then tap Bracket.</p>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={handleStartBracket}
+              disabled={state.teams.length < 2}
+            >
+              <Trophy size={16} />
+              Start bracket
+            </button>
           </div>
         )}
-      </section>
+      </section> : null}
     </main>
   )
 }
