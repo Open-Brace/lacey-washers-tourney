@@ -9,6 +9,7 @@
   --gold: #b88118;
   --sky: #2f6f9f;
   --radius: 8px;
+  --page-color: #edf4ed;
   --page-background:
     radial-gradient(circle at 8% 0%, rgba(47, 111, 159, 0.15), transparent 26rem),
     linear-gradient(180deg, #f8faf7 0%, #edf4ed 100%);
@@ -30,18 +31,28 @@
 
 html {
   min-height: 100%;
-  background: var(--page-background);
+  background: var(--page-color);
 }
 
 body {
   min-width: 320px;
   min-height: 100svh;
   margin: 0;
+  background: var(--page-color);
+}
+
+body::before {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
   background: var(--page-background);
-  background-attachment: fixed;
+  content: "";
+  pointer-events: none;
 }
 
 #root {
+  position: relative;
+  z-index: 1;
   min-height: 100svh;
   background: transparent;
 }
