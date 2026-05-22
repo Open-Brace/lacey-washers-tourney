@@ -38,7 +38,6 @@ export const defaultPlayers = [
   'Alex',
   'Collin',
   'Kathy',
-  'Rob',
   'Kyle',
   'Lacey',
   'Tom',
@@ -49,16 +48,67 @@ export const defaultPlayers = [
   'Charlie',
 ]
 
+export const fixedTeams: Team[] = [
+  {
+    id: '2f82327f-7742-4ce7-aab4-225e723d293b',
+    name: 'Kathy & Kyle',
+    players: ['Kathy', 'Kyle'],
+    seed: 1,
+  },
+  {
+    id: '712a1bef-a092-424f-addb-38701b5d6a06',
+    name: 'Tom & Lacey',
+    players: ['Tom', 'Lacey'],
+    seed: 2,
+  },
+  {
+    id: 'c41e4895-5906-4851-8281-60b4b23c11de',
+    name: 'Brady & Maria',
+    players: ['Brady', 'Maria'],
+    seed: 3,
+  },
+  {
+    id: '672ea4ad-927f-4ab5-9249-47e3b854fc1d',
+    name: 'Grandpa & George 5',
+    players: ['Grandpa', 'George 5'],
+    seed: 4,
+  },
+  {
+    id: 'e1e07f38-d001-491c-9dd4-a67bdb55ac0e',
+    name: 'Grandma & Alex',
+    players: ['Grandma', 'Alex'],
+    seed: 5,
+  },
+  {
+    id: 'eccbc1e2-610d-49a6-a39c-e8c79779a0ea',
+    name: 'Stella & George 4',
+    players: ['Stella', 'George 4'],
+    seed: 6,
+  },
+  {
+    id: '856caff9-2108-489d-bff6-87271629bd66',
+    name: 'Charlie & Collin',
+    players: ['Charlie', 'Collin'],
+    seed: 7,
+  },
+  {
+    id: 'afa8a25d-acea-4d8c-955e-a67740752068',
+    name: 'Eli & Theresa',
+    players: ['Eli', 'Theresa'],
+    seed: 8,
+  },
+]
+
 export const createDefaultState = (): TournamentState => {
-  const teams = randomizeTeams(defaultPlayers)
+  const bracket = startBracket(fixedTeams)
 
   return {
     title: eventTitle,
     players: defaultPlayers,
-    teams,
-    matches: [],
-    status: 'setup',
-    updatedBy: 'Initial draw',
+    teams: bracket.teams,
+    matches: bracket.matches,
+    status: 'live',
+    updatedBy: 'Locked draw',
   }
 }
 

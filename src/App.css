@@ -53,7 +53,7 @@ main {
   top: 0;
   z-index: 5;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) 46px;
+  grid-template-columns: minmax(0, 1fr) 46px;
   gap: 0;
   margin: 0 -18px 10px;
   padding: calc(8px + var(--safe-top)) 18px 8px;
@@ -89,6 +89,7 @@ button:not(:disabled):active {
 }
 
 .view-switch button,
+.bracket-title,
 .seed-actions button,
 .roster-editor button,
 .title-actions button,
@@ -97,6 +98,14 @@ button:not(:disabled):active {
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+.bracket-title {
+  min-height: 42px;
+  justify-content: flex-start;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 900;
 }
 
 .view-switch button {
