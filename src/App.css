@@ -216,28 +216,49 @@ textarea {
 
 .team-card {
   display: grid;
-  grid-template-columns: 70px minmax(0, 1fr);
+  grid-template-columns: 70px minmax(0, 1fr) 48px;
   gap: 12px;
   align-items: center;
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--soft);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
-.team-card label {
+.team-card.dragging {
+  border-color: rgba(47, 111, 159, 0.48);
+  box-shadow: 0 14px 34px rgba(31, 45, 42, 0.16);
+  transform: scale(1.01);
+}
+
+.seed-rank {
   display: grid;
   gap: 4px;
 }
 
-.team-card label span {
+.seed-rank span {
   color: var(--muted);
   font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
-.team-card input,
+.seed-rank strong {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  font-size: 18px;
+}
+
 .score-row input {
   min-width: 0;
   border: 1px solid var(--line);
@@ -247,11 +268,6 @@ textarea {
   font: inherit;
   font-weight: 900;
   text-align: center;
-}
-
-.team-card input {
-  width: 52px;
-  height: 40px;
 }
 
 .team-card strong {
@@ -265,6 +281,21 @@ textarea {
   margin: 2px 0 0;
   color: var(--muted);
   font-size: 13px;
+}
+
+.drag-handle {
+  display: grid;
+  place-items: center;
+  min-height: 48px;
+  width: 48px;
+  padding: 0;
+  color: var(--muted);
+  touch-action: none;
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
 }
 
 .round-tabs {

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import {
   Dices,
+  GripVertical,
   Medal,
   RefreshCcw,
   RotateCcw,
@@ -43,8 +44,13 @@ function App() {
   const [selectedRound, setSelectedRound] = useState(1)
   const [rosterOpen, setRosterOpen] = useState(false)
   const [rosterDraft, setRosterDraft] = useState(state.players.join('\n'))
+  const [draggingTeamId, setDraggingTeamId] = useState<string | null>(null)
+  const stateRef = useRef(state)
+  const dragTeamIdRef = useRef<string | null>(null)
+  const dragChangedRef = useRef(false)
   const totalRounds = getTotalRounds(state.matches)
   const champion = getChampion(state)
+  const seededTeams = useMemo(() => sortTeamsBySeed(state.teams), [state.teams])
   const rounds = useMemo(
     () =>
       Array.from({ length: totalRounds }, (_, index) => index + 1).map((round) => ({
@@ -55,6 +61,10 @@ function App() {
       })),
     [state.matches, totalRounds],
   )
+
+  useEffect(() => {
+    stateRef.current = state
+  }, [state])
 
   useEffect(() => {
     let isMounted = true
@@ -173,16 +183,6 @@ function App() {
     setSelectedRound(1)
   }
 
-  const handleSeedChange = (teamId: string, value: string) => {
-    const seed = value === '' ? undefined : Number.parseInt(value, 10)
-    updateTournament({
-      ...state,
-      teams: state.teams.map((team) => (team.id === teamId ? { ...team, seed } : team)),
-      matches: [],
-      status: 'setup',
-    })
-  }
-
   const handleScoreChange = (match: Match, side: 'A' | 'B', value: string) => {
     const matches = updateScore(state.matches, match.id, side, parseScore(value))
     updateTournament({
@@ -217,6 +217,66 @@ function App() {
       matches: [],
       status: 'setup',
     })
+  }
+
+  const handleSeedDragStart = (teamId: string, event: PointerEvent<HTMLButtonElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId)
+    dragTeamIdRef.current = teamId
+    dragChangedRef.current = false
+    setDraggingTeamId(teamId)
+  }
+
+  const handleSeedDragMove = (event: PointerEvent<HTMLButtonElement>) => {
+    if (!dragTeamIdRef.current) return
+
+    const target = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>('[data-team-id]')
+    const targetTeamId = target?.dataset.teamId
+
+    if (!targetTeamId || targetTeamId === dragTeamIdRef.current) return
+
+    reorderSeedDraft(dragTeamIdRef.current, targetTeamId)
+  }
+
+  const handleSeedDragEnd = (event: PointerEvent<HTMLButtonElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+
+    const shouldSave = dragChangedRef.current
+    dragTeamIdRef.current = null
+    dragChangedRef.current = false
+    setDraggingTeamId(null)
+
+    if (!shouldSave) return
+
+    const nextState = { ...stateRef.current, updatedBy: 'Party phone' }
+    stateRef.current = nextState
+    setState(nextState)
+    saveTournament(nextState)
+  }
+
+  const reorderSeedDraft = (activeTeamId: string, targetTeamId: string) => {
+    const orderedTeams = sortTeamsBySeed(stateRef.current.teams)
+    const activeIndex = orderedTeams.findIndex((team) => team.id === activeTeamId)
+    const targetIndex = orderedTeams.findIndex((team) => team.id === targetTeamId)
+
+    if (activeIndex < 0 || targetIndex < 0 || activeIndex === targetIndex) return
+
+    const [activeTeam] = orderedTeams.splice(activeIndex, 1)
+    orderedTeams.splice(targetIndex, 0, activeTeam)
+
+    const nextState: TournamentState = {
+      ...stateRef.current,
+      teams: applySeedOrder(orderedTeams),
+      matches: [],
+      status: 'setup',
+    }
+
+    dragChangedRef.current = true
+    stateRef.current = nextState
+    setState(nextState)
   }
 
   return (
@@ -300,11 +360,14 @@ function App() {
         </div>
 
         <div className="team-grid">
-          {state.teams.map((team) => (
+          {seededTeams.map((team) => (
             <TeamSeedCard
               key={team.id}
               team={team}
-              onSeedChange={(value) => handleSeedChange(team.id, value)}
+              dragging={draggingTeamId === team.id}
+              onDragStart={handleSeedDragStart}
+              onDragMove={handleSeedDragMove}
+              onDragEnd={handleSeedDragEnd}
             />
           ))}
         </div>
@@ -366,25 +429,38 @@ function App() {
 
 function TeamSeedCard({
   team,
-  onSeedChange,
+  dragging,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
 }: {
   team: Team
-  onSeedChange: (value: string) => void
+  dragging: boolean
+  onDragStart: (teamId: string, event: PointerEvent<HTMLButtonElement>) => void
+  onDragMove: (event: PointerEvent<HTMLButtonElement>) => void
+  onDragEnd: (event: PointerEvent<HTMLButtonElement>) => void
 }) {
   return (
-    <article className="team-card">
-      <label>
+    <article className={`team-card ${dragging ? 'dragging' : ''}`} data-team-id={team.id}>
+      <div className="seed-rank">
         <span>Seed</span>
-        <input
-          inputMode="numeric"
-          value={team.seed ?? ''}
-          onChange={(event) => onSeedChange(event.target.value)}
-        />
-      </label>
+        <strong>{team.seed}</strong>
+      </div>
       <div>
         <strong>{team.name}</strong>
         <p>{team.players.length === 1 ? 'Solo draw' : team.players.join(' / ')}</p>
       </div>
+      <button
+        type="button"
+        className="drag-handle"
+        aria-label={`Drag ${team.name} to reseed`}
+        onPointerDown={(event) => onDragStart(team.id, event)}
+        onPointerMove={onDragMove}
+        onPointerUp={onDragEnd}
+        onPointerCancel={onDragEnd}
+      >
+        <GripVertical size={22} />
+      </button>
     </article>
   )
 }
@@ -458,5 +534,14 @@ function TeamScoreRow({
     </div>
   )
 }
+
+const sortTeamsBySeed = (teams: Team[]) =>
+  [...teams].sort((a, b) => (a.seed ?? Number.MAX_SAFE_INTEGER) - (b.seed ?? Number.MAX_SAFE_INTEGER))
+
+const applySeedOrder = (teams: Team[]) =>
+  teams.map((team, index) => ({
+    ...team,
+    seed: index + 1,
+  }))
 
 export default App
