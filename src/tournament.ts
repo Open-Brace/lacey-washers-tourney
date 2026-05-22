@@ -73,7 +73,7 @@ export const randomizeTeams = (players: string[]): Team[] => {
   for (let index = 0; index < shuffled.length; index += 2) {
     const teamPlayers = shuffled.slice(index, index + 2)
     teams.push({
-      id: crypto.randomUUID(),
+      id: createId(),
       name: teamPlayers.join(' & '),
       players: teamPlayers,
       seed: teams.length + 1,
@@ -81,6 +81,14 @@ export const randomizeTeams = (players: string[]): Team[] => {
   }
 
   return teams
+}
+
+const createId = () => {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID()
+  }
+
+  return `team-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 }
 
 export const assignSeeds = (teams: Team[]) =>
