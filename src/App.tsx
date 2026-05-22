@@ -7,14 +7,11 @@ import {
   RotateCcw,
   Save,
   Trophy,
-  Wifi,
-  WifiOff,
 } from 'lucide-react'
 import './App.css'
 import {
   assignSeeds,
   createDefaultState,
-  eventTitle,
   getChampion,
   getRoundName,
   getTeam,
@@ -46,7 +43,7 @@ const cleanScoreDraft = (value: string) => value.replace(/\D/g, '').slice(0, 2)
 
 function App() {
   const [state, setState] = useState<TournamentState>(() => createDefaultState())
-  const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [, setSaveState] = useState<SaveState>('idle')
   const [activeView, setActiveView] = useState<ActiveView>('teams')
   const [selectedRound, setSelectedRound] = useState(1)
   const [rosterOpen, setRosterOpen] = useState(false)
@@ -324,31 +321,6 @@ function App() {
 
   return (
     <main>
-      <header className="app-header">
-        <div className="header-copy">
-          <div className="event-mark">
-            <span className="washer-dot" />
-            Lacey's Graduation Washers
-          </div>
-          <h1>{eventTitle}</h1>
-        </div>
-
-        <div className={`sync-pill ${saveState}`}>
-          {saveState === 'offline' ? <WifiOff size={16} /> : <Wifi size={16} />}
-          <span>{saveState === 'saving' ? 'Saving' : saveState === 'offline' ? 'Offline' : 'Live'}</span>
-        </div>
-      </header>
-
-      {champion ? (
-        <section className="champion-banner">
-          <div>
-            <Medal size={28} />
-            <span>Champions</span>
-          </div>
-          <strong>{champion.name}</strong>
-        </section>
-      ) : null}
-
       <nav className="view-switch" aria-label="Tournament view">
         <button
           type="button"
@@ -369,6 +341,16 @@ function App() {
           Bracket
         </button>
       </nav>
+
+      {champion ? (
+        <section className="champion-banner">
+          <div>
+            <Medal size={28} />
+            <span>Champions</span>
+          </div>
+          <strong>{champion.name}</strong>
+        </section>
+      ) : null}
 
       {activeView === 'teams' ? <section className="setup-panel">
         <div className="section-title">
@@ -502,7 +484,43 @@ function App() {
           </div>
         )}
       </section> : null}
+
+      <RulesReference />
     </main>
+  )
+}
+
+function RulesReference() {
+  return (
+    <section className="rules-panel" aria-labelledby="rules-heading">
+      <div className="rules-heading">
+        <p>Rules</p>
+        <h2 id="rules-heading">Washers reference</h2>
+      </div>
+
+      <div className="rules-list">
+        <div>
+          <strong>Teams</strong>
+          <span>Two players per team. Partners stand at opposite boards and stay there for the game.</span>
+        </div>
+        <div>
+          <strong>Turns</strong>
+          <span>Players alternate throws from the same side, then the next round is thrown back the other way.</span>
+        </div>
+        <div>
+          <strong>Scoring</strong>
+          <span>1 point for a washer in the box. 3 points for a washer in the cup.</span>
+        </div>
+        <div>
+          <strong>Canceling</strong>
+          <span>Only one team scores each round. Equal points cancel out, and the higher team gets the difference.</span>
+        </div>
+        <div>
+          <strong>Winning</strong>
+          <span>First team to 21 wins. Enter the final score here, and the bracket will advance the winner.</span>
+        </div>
+      </div>
+    </section>
   )
 }
 
