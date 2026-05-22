@@ -53,7 +53,7 @@ main {
   top: 0;
   z-index: 2;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr)) 46px;
   gap: 0;
   margin: 0 0 10px;
   padding: 4px;
@@ -113,6 +113,18 @@ button:not(:disabled):active {
   background: var(--ink);
   color: white;
   box-shadow: 0 6px 16px rgba(31, 45, 42, 0.18);
+}
+
+.view-switch .music-toggle {
+  min-height: 42px;
+  width: 42px;
+  justify-self: end;
+  color: var(--ink);
+}
+
+.view-switch .music-toggle[aria-pressed="true"] {
+  background: rgba(37, 111, 91, 0.12);
+  color: var(--green);
 }
 
 .view-switch button:not(:disabled):active {

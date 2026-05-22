@@ -7,6 +7,8 @@ import {
   RotateCcw,
   Save,
   Trophy,
+  Volume2,
+  VolumeX,
 } from 'lucide-react'
 import './App.css'
 import {
@@ -35,6 +37,7 @@ type ScoreDrafts = Record<string, string>
 
 const numberValue = (value: number | undefined) => (value == null ? '' : String(value))
 const scoreKey = (matchId: string, side: MatchSide) => `${matchId}:${side}`
+const partySongPath = '/lacey-grad-party.mp3'
 const parseScore = (value: string) => {
   if (value.trim() === '') return undefined
   return Math.max(0, Math.min(99, Number.parseInt(value, 10) || 0))
@@ -51,7 +54,9 @@ function App() {
   const [draggingTeamId, setDraggingTeamId] = useState<string | null>(null)
   const [editingScoreKey, setEditingScoreKey] = useState<string | null>(null)
   const [scoreDrafts, setScoreDrafts] = useState<ScoreDrafts>({})
+  const [musicMuted, setMusicMuted] = useState(() => localStorage.getItem('laceyMusicMuted') === 'true')
   const stateRef = useRef(state)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const dragTeamIdRef = useRef<string | null>(null)
   const dragChangedRef = useRef(false)
   const totalRounds = getTotalRounds(state.matches)
@@ -71,6 +76,38 @@ function App() {
   useEffect(() => {
     stateRef.current = state
   }, [state])
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    audio.volume = 0.72
+    void audio.play().catch(() => undefined)
+
+    const unlockAudio = () => {
+      void audio.play().catch(() => undefined)
+    }
+
+    window.addEventListener('pointerdown', unlockAudio, { once: true })
+    window.addEventListener('keydown', unlockAudio, { once: true })
+
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio)
+      window.removeEventListener('keydown', unlockAudio)
+    }
+  }, [])
+
+  useEffect(() => {
+    const audio = audioRef.current
+    localStorage.setItem('laceyMusicMuted', String(musicMuted))
+
+    if (!audio) return
+
+    audio.muted = musicMuted
+    if (!musicMuted) {
+      void audio.play().catch(() => undefined)
+    }
+  }, [musicMuted])
 
   useEffect(() => {
     let isMounted = true
@@ -259,6 +296,22 @@ function App() {
     setActiveView('teams')
   }
 
+  const handleMusicToggle = () => {
+    setMusicMuted((muted) => {
+      const nextMuted = !muted
+      const audio = audioRef.current
+
+      if (audio) {
+        audio.muted = nextMuted
+        if (!nextMuted) {
+          void audio.play().catch(() => undefined)
+        }
+      }
+
+      return nextMuted
+    })
+  }
+
   const handleSeedDragStart = (teamId: string, event: PointerEvent<HTMLButtonElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId)
     dragTeamIdRef.current = teamId
@@ -321,6 +374,7 @@ function App() {
 
   return (
     <main>
+      <audio ref={audioRef} src={partySongPath} autoPlay loop muted={musicMuted} preload="auto" playsInline />
       <nav className="view-switch" aria-label="Tournament view">
         <button
           type="button"
@@ -339,6 +393,16 @@ function App() {
         >
           <Trophy size={18} />
           Bracket
+        </button>
+        <button
+          type="button"
+          className="music-toggle"
+          aria-label={musicMuted ? 'Unmute party song' : 'Mute party song'}
+          aria-pressed={!musicMuted}
+          title={musicMuted ? 'Unmute song' : 'Mute song'}
+          onClick={handleMusicToggle}
+        >
+          {musicMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
         </button>
       </nav>
 
