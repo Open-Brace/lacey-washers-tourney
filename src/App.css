@@ -377,6 +377,11 @@ textarea {
   box-shadow: inset 4px 0 0 var(--green);
 }
 
+.score-row.editing {
+  background: #fff;
+  box-shadow: inset 0 0 0 2px rgba(37, 111, 91, 0.22);
+}
+
 .score-row strong,
 .score-row span {
   display: block;
@@ -401,6 +406,7 @@ textarea {
   width: 58px;
   height: 42px;
   font-size: 18px;
+  text-align: center;
 }
 
 .score-row input:disabled {

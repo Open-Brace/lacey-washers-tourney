@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import {
   Dices,
   GripVertical,
@@ -31,12 +31,16 @@ import {
 import { supabase, tableName, tournamentId, type TournamentRow } from './supabase'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'offline'
+type MatchSide = 'A' | 'B'
+type ScoreDrafts = Record<string, string>
 
 const numberValue = (value: number | undefined) => (value == null ? '' : String(value))
+const scoreKey = (matchId: string, side: MatchSide) => `${matchId}:${side}`
 const parseScore = (value: string) => {
   if (value.trim() === '') return undefined
   return Math.max(0, Math.min(99, Number.parseInt(value, 10) || 0))
 }
+const cleanScoreDraft = (value: string) => value.replace(/\D/g, '').slice(0, 2)
 
 function App() {
   const [state, setState] = useState<TournamentState>(() => createDefaultState())
@@ -45,6 +49,8 @@ function App() {
   const [rosterOpen, setRosterOpen] = useState(false)
   const [rosterDraft, setRosterDraft] = useState(state.players.join('\n'))
   const [draggingTeamId, setDraggingTeamId] = useState<string | null>(null)
+  const [editingScoreKey, setEditingScoreKey] = useState<string | null>(null)
+  const [scoreDrafts, setScoreDrafts] = useState<ScoreDrafts>({})
   const stateRef = useRef(state)
   const dragTeamIdRef = useRef<string | null>(null)
   const dragChangedRef = useRef(false)
@@ -144,6 +150,7 @@ function App() {
 
   const updateTournament = (nextState: TournamentState) => {
     const stamped = { ...nextState, updatedBy: 'Party phone' }
+    stateRef.current = stamped
     setState(stamped)
     saveTournament(stamped)
   }
@@ -183,12 +190,39 @@ function App() {
     setSelectedRound(1)
   }
 
-  const handleScoreChange = (match: Match, side: 'A' | 'B', value: string) => {
-    const matches = updateScore(state.matches, match.id, side, parseScore(value))
+  const handleScoreFocus = (match: Match, side: MatchSide) => {
+    const key = scoreKey(match.id, side)
+    const score = side === 'A' ? match.scoreA : match.scoreB
+    setEditingScoreKey(key)
+    setScoreDrafts((drafts) => ({ ...drafts, [key]: numberValue(score) }))
+  }
+
+  const handleScoreDraftChange = (match: Match, side: MatchSide, value: string) => {
+    const key = scoreKey(match.id, side)
+    setScoreDrafts((drafts) => ({ ...drafts, [key]: cleanScoreDraft(value) }))
+  }
+
+  const handleScoreCommit = (match: Match, side: MatchSide, value: string) => {
+    const key = scoreKey(match.id, side)
+    const nextValue = cleanScoreDraft(value)
+    const sourceState = stateRef.current
+    const currentMatch = sourceState.matches.find((item) => item.id === match.id)
+    const currentScore = side === 'A' ? currentMatch?.scoreA : currentMatch?.scoreB
+
+    setEditingScoreKey((activeKey) => (activeKey === key ? null : activeKey))
+    setScoreDrafts((drafts) => {
+      const nextDrafts = { ...drafts }
+      delete nextDrafts[key]
+      return nextDrafts
+    })
+
+    if (numberValue(currentScore) === nextValue) return
+
+    const matches = updateScore(sourceState.matches, match.id, side, parseScore(nextValue))
     updateTournament({
-      ...state,
+      ...sourceState,
       matches,
-      status: getChampion({ ...state, matches }) ? 'complete' : 'live',
+      status: getChampion({ ...sourceState, matches }) ? 'complete' : 'live',
     })
   }
 
@@ -409,7 +443,11 @@ function App() {
                       key={match.id}
                       match={match}
                       teams={state.teams}
-                      onScoreChange={handleScoreChange}
+                      editingScoreKey={editingScoreKey}
+                      scoreDrafts={scoreDrafts}
+                      onScoreFocus={handleScoreFocus}
+                      onScoreDraftChange={handleScoreDraftChange}
+                      onScoreCommit={handleScoreCommit}
                     />
                   ))}
                 </div>
@@ -468,34 +506,54 @@ function TeamSeedCard({
 function MatchCard({
   match,
   teams,
-  onScoreChange,
+  editingScoreKey,
+  scoreDrafts,
+  onScoreFocus,
+  onScoreDraftChange,
+  onScoreCommit,
 }: {
   match: Match
   teams: Team[]
-  onScoreChange: (match: Match, side: 'A' | 'B', value: string) => void
+  editingScoreKey: string | null
+  scoreDrafts: ScoreDrafts
+  onScoreFocus: (match: Match, side: MatchSide) => void
+  onScoreDraftChange: (match: Match, side: MatchSide, value: string) => void
+  onScoreCommit: (match: Match, side: MatchSide, value: string) => void
 }) {
   const teamA = getTeam(teams, match.teamAId)
   const teamB = getTeam(teams, match.teamBId)
   const waiting = !teamA && !teamB
   const pendingOpponent = match.round > 1 && (!teamA || !teamB)
+  const scoreAKey = scoreKey(match.id, 'A')
+  const scoreBKey = scoreKey(match.id, 'B')
 
   return (
     <article className={`match-card ${match.winnerId ? 'decided' : ''}`}>
       <TeamScoreRow
+        scoreKey={scoreAKey}
         team={teamA}
         winner={match.winnerId === teamA?.id}
         score={match.scoreA}
+        draftScore={scoreDrafts[scoreAKey]}
+        editing={editingScoreKey === scoreAKey}
         disabled={!teamA || waiting || pendingOpponent}
         placeholder={teamA ? '0' : match.round === 1 ? 'Bye' : 'TBD'}
-        onScoreChange={(value) => onScoreChange(match, 'A', value)}
+        onScoreFocus={() => onScoreFocus(match, 'A')}
+        onScoreDraftChange={(value) => onScoreDraftChange(match, 'A', value)}
+        onScoreCommit={(value) => onScoreCommit(match, 'A', value)}
       />
       <TeamScoreRow
+        scoreKey={scoreBKey}
         team={teamB}
         winner={match.winnerId === teamB?.id}
         score={match.scoreB}
+        draftScore={scoreDrafts[scoreBKey]}
+        editing={editingScoreKey === scoreBKey}
         disabled={!teamB || waiting || pendingOpponent}
         placeholder={teamB ? '0' : match.round === 1 && teamA ? 'Bye' : 'TBD'}
-        onScoreChange={(value) => onScoreChange(match, 'B', value)}
+        onScoreFocus={() => onScoreFocus(match, 'B')}
+        onScoreDraftChange={(value) => onScoreDraftChange(match, 'B', value)}
+        onScoreCommit={(value) => onScoreCommit(match, 'B', value)}
       />
       {waiting || pendingOpponent ? <p className="match-note">Waiting on earlier winners</p> : null}
     </article>
@@ -503,33 +561,57 @@ function MatchCard({
 }
 
 function TeamScoreRow({
+  scoreKey,
   team,
   winner,
   score,
+  draftScore,
+  editing,
   disabled,
   placeholder,
-  onScoreChange,
+  onScoreFocus,
+  onScoreDraftChange,
+  onScoreCommit,
 }: {
+  scoreKey: string
   team?: Team
   winner: boolean
   score?: number
+  draftScore?: string
+  editing: boolean
   disabled: boolean
   placeholder: string
-  onScoreChange: (value: string) => void
+  onScoreFocus: () => void
+  onScoreDraftChange: (value: string) => void
+  onScoreCommit: (value: string) => void
 }) {
+  const value = editing ? (draftScore ?? numberValue(score)) : numberValue(score)
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.currentTarget.blur()
+    }
+  }
+
   return (
-    <div className={`score-row ${winner ? 'winner' : ''}`}>
+    <div className={`score-row ${winner ? 'winner' : ''} ${editing ? 'editing' : ''}`}>
       <div>
         <strong>{team?.name ?? placeholder}</strong>
         <span>{team?.seed ? `Seed ${team.seed}` : team ? 'Unseeded' : ''}</span>
       </div>
       <input
+        key={scoreKey}
         aria-label={`${team?.name ?? placeholder} score`}
         inputMode="numeric"
+        maxLength={2}
+        pattern="[0-9]*"
         disabled={disabled}
         placeholder={placeholder}
-        value={numberValue(score)}
-        onChange={(event) => onScoreChange(event.target.value)}
+        value={value}
+        onFocus={onScoreFocus}
+        onChange={(event) => onScoreDraftChange(event.target.value)}
+        onBlur={(event) => onScoreCommit(event.target.value)}
+        onKeyDown={handleKeyDown}
       />
     </div>
   )
